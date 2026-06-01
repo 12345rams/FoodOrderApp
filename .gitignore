@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# IntelliJ / IDE
+.idea/
+*.iml
+
+# Node
+backend/node_modules/
+backend/dist/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+
+# Local env
+.env
+backend/.env
+frontend/.env
+
