@@ -7,22 +7,9 @@ const chatSessionSchema = new mongoose.Schema(
     whatsappNumber: { type: String, required: true },
     currentState: {
       type: String,
-      enum: [
-        'START',
-        'MAIN_MENU',
-        'VIEWING_PRODUCTS',
-        'WAITING_PRODUCT_SELECTION',
-        'WAITING_QUANTITY',
-        'WAITING_ADDRESS',
-        'WAITING_CONFIRMATION',
-        'ORDER_PLACED',
-        'HUMAN_SUPPORT'
-      ],
       default: 'START'
     },
-    selectedProductId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-    selectedProductName: String,
-    quantity: Number,
+    selectedItems: { type: Array, default: [] },
     address: String,
     lastMessage: String,
     lastIntent: String,

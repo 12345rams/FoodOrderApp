@@ -5,7 +5,7 @@ import Message from '../models/Message.js';
 import Product from '../models/Product.js';
 import KnowledgeItem from '../models/KnowledgeItem.js';
 import { processChat } from '../services/chatbotService.js';
-import { detectIntent } from '../services/geminiService.js';
+
 import { sendWhatsAppMessage, validateTwilioSignature } from '../services/twilioService.js';
 import { normalizeWhatsAppNumber } from '../utils/normalize.js';
 
@@ -41,7 +41,10 @@ export async function twilioWhatsAppWebhook(req, res, next) {
 
     const fromRaw = req.body.From || req.body.from || '';
     const toRaw = req.body.To || req.body.to || '';
-    const body = textBody(req.body.Body || req.body.body).trim();
+    let body = textBody(req.body.Body || req.body.body).trim();
+    if (req.body.Latitude && req.body.Longitude) {
+      body += (body ? '\n' : '') + `[Location Pin Shared: Lat ${req.body.Latitude}, Lng ${req.body.Longitude}]`;
+    }
     const messageSid = req.body.MessageSid || req.body.messageSid || null;
     const profileName = req.body.ProfileName || req.body.profileName || 'Customer';
 
@@ -116,30 +119,19 @@ export async function twilioWhatsAppWebhook(req, res, next) {
     const products = await Product.find({ businessId: business._id, isActive: true }).lean();
     const knowledgeItems = await KnowledgeItem.find({ businessId: business._id, isActive: true }).lean();
     const knowledgeContext = selectKnowledgeContext(body, knowledgeItems);
-    const intentData = await detectIntent({
-      message: body,
-      business,
-      products,
-      currentState: session.currentState,
-      knowledgeContext
-    });
-
     session.lastMessage = body;
-    session.lastIntent = intentData.intent;
 
     const result = await processChat({
       business,
       customer,
       session,
-      message: body,
-      intentData
+      message: body
     });
 
     console.log('webhook processChat result:', {
       shouldReply: result.shouldReply,
       reply: result.reply,
-      currentState: session.currentState,
-      lastIntent: session.lastIntent
+      currentState: session.currentState
     });
 
     await session.save();

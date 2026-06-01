@@ -20,6 +20,10 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.get('/', (req, res) => {
+  res.send(`Your backend is Live Mongdb URL is ${process.env.MONGO_URI || 'Not Set'}`);
+});
+
 app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'whatsapp-b2b-backend' });
 });

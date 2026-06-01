@@ -1,37 +1,59 @@
 import axios from 'axios';
 import { parseGeminiJson } from '../utils/intentParser.js';
 
-export async function detectIntent({ message, business, products, currentState, knowledgeContext = [] }) {
+export async function detectIntent({ message, history = [], business, products, session }) {
   const apiKey = business?.geminiApiKey || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.warn('Gemini detectIntent skipped: no Gemini API key configured (neither business-specific nor default)', { businessId: business?._id });
-    return { intent: 'UNKNOWN', items: [], address: '', reply: '' };
+    console.warn('Gemini detectIntent skipped: no API key configured');
+    return { reply: 'AI is currently unavailable.', items: [], address: '', status: 'CHATTING' };
   }
 
-  const productList = products.slice(0, 30).map((p) => ({ name: p.name, price: p.price, stock: p.stock }));
-  const knowledgeList = knowledgeContext.slice(0, 5).map((k) => ({
-    title: k.title,
-    content: k.content,
-    tags: k.tags || []
-  }));
-  const prompt = `You are an AI order assistant and intent extractor for a WhatsApp ordering bot.
-Return ONLY JSON in this exact format:
-{"intent":"VIEW_PRODUCTS|ORDER_PRODUCT|PROVIDE_QUANTITY|PROVIDE_ADDRESS|CONFIRM_ORDER|CANCEL_ORDER|TRACK_ORDER|TALK_TO_SUPPORT|OUT_OF_STOCK|UNKNOWN", "items": [{"productName":"", "quantity":null}], "address":"", "reply":""}
+  const productList = products.map(p => `- ${p.name}: Rs ${p.price} (Stock: ${p.stock})`).join('\n');
+  const historyText = history.map(m => `${m.direction === 'incoming' ? 'Customer' : 'Waiter'}: ${m.body}`).join('\n');
 
-CRITICAL RULES:
-1. If the user wants to order products, extract ALL products they mentioned into the 'items' array.
-2. STOCK VALIDATION: Check the requested quantity for each item against the 'stock' property in the Products list. If the user requests MORE than the available stock for ANY item, set intent to "OUT_OF_STOCK" and write a friendly 'reply' explaining which items are out of stock and how many are actually available.
-3. If they just say "hi" or want to see the menu, intent is VIEW_PRODUCTS.
-4. If they just provide an address, intent is PROVIDE_ADDRESS.
+  // We feed the existing items and address from the session to the AI so it doesn't forget them
+  const currentCart = session.selectedItems && session.selectedItems.length > 0 
+    ? JSON.stringify(session.selectedItems.map(i => ({ productName: i.productName, quantity: i.quantity, price: i.price }))) 
+    : "[]";
 
-Business: ${business.businessName}
-CurrentState: ${currentState}
-Products: ${JSON.stringify(productList)}
-KnowledgeBase: ${JSON.stringify(knowledgeList)}
-UserMessage: ${message}`;
+  const prompt = `You are a friendly, conversational hotel waiter taking a food order for "${business.businessName}". 
+You speak naturally, politely, and smoothly like a real human waiter via WhatsApp.
+Answer questions about the menu. Help the customer decide. 
+As the customer orders items, keep track of them in your "items" array.
+The customer might share a WhatsApp map pin which will appear as [Location Pin Shared: Lat X, Lng Y].
+When they seem done ordering, politely ask them exactly this: "Share me your location" (or very similar phrasing).
+Once they provide the delivery address (or map pin) AND confirm the total order, finalize it.
+
+Menu & Stock:
+${productList}
+
+Current Cart from Database:
+${currentCart}
+
+Current Address from Database:
+${session.address || "None provided yet"}
+
+Conversation History:
+${historyText}
+Customer: ${message}
+
+Return ONLY a JSON object in this EXACT format, NO markdown:
+{
+  "reply": "Your conversational reply to the customer.",
+  "items": [{"productName": "Exact Name", "quantity": 1, "price": 100}],
+  "address": "Any delivery address or map coordinates they provided so far",
+  "status": "CHATTING|CONFIRMED|HUMAN_SUPPORT"
+}
+
+RULES:
+1. "items" MUST be the FULL CURRENT CART (all items ordered so far). If they add an item, include the previous ones too. Use exact product names and prices from the Menu.
+2. If an item is out of stock or they request more than the stock, apologize in the 'reply' and DO NOT add it to the 'items'.
+3. "status" should be "CHATTING" normally.
+4. If they want to talk to a human, set "status" to "HUMAN_SUPPORT".
+5. If they have confirmed everything AND provided an address, set "status" to "CONFIRMED".`;
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
@@ -46,7 +68,7 @@ UserMessage: ${message}`;
     return parseGeminiJson(text);
   } catch (error) {
     console.error('Gemini detectIntent error:', error?.response?.data || error.message || error);
-    return { intent: 'UNKNOWN', items: [], address: '', reply: '' };
+    return { reply: 'Sorry, I am having trouble understanding right now.', items: [], address: '', status: 'CHATTING' };
   }
 }
 
@@ -55,8 +77,7 @@ export async function detectAggregatorIntent(body, geminiApiKey = null) {
     const key = geminiApiKey || process.env.GEMINI_API_KEY;
     if (!key) return { sort: 'distance' };
     
-    // We can use native fetch or axios. Since axios is imported:
-    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     const prompt = `You are an AI for a hotel/restaurant aggregator app.
 The user just provided this prompt to search for places: "${body}"
@@ -74,8 +95,7 @@ Return ONLY a JSON object: { "sort": "price" } or "rating" or "distance". DO NOT
 
     const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const cleanText = text.trim().replace(/```json/g, '').replace(/```/g, '');
-    const data = JSON.parse(cleanText);
-    return data;
+    return JSON.parse(cleanText);
   } catch (err) {
     console.error('Gemini detectAggregatorIntent error:', err?.response?.data || err.message);
     return { sort: 'distance' };
