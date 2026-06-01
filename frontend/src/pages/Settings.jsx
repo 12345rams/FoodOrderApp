@@ -81,8 +81,8 @@ export default function Settings() {
     }
   }
 
-  const Input = ({ label, field, type = "text", placeholder }) => (
-    <div className="group">
+  const renderInput = ({ label, field, type = "text", placeholder }) => (
+    <div className="group" key={field}>
       <label className="block text-sm font-semibold text-slate-700 mb-1.5 transition-colors group-focus-within:text-emerald-600">{label}</label>
       <input 
         type={type}
@@ -94,8 +94,8 @@ export default function Settings() {
     </div>
   );
 
-  const Toggle = ({ label, field, desc }) => (
-    <div className="flex items-center justify-between p-5 bg-white/60 backdrop-blur-sm border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
+  const renderToggle = ({ label, field, desc }) => (
+    <div className="flex items-center justify-between p-5 bg-white/60 backdrop-blur-sm border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300" key={field}>
       <div>
         <p className="font-bold text-slate-800 text-base">{label}</p>
         <p className="text-sm text-slate-500 mt-0.5">{desc}</p>
@@ -200,8 +200,8 @@ export default function Settings() {
                   <h2 className="text-2xl font-bold text-slate-800">Business Profile</h2>
                 </div>
                 <div className="grid md:grid-cols-2 gap-6">
-                  <Input field="businessName" label="Business Name" />
-                  <Input field="businessType" label="Business Type" placeholder="e.g. Restaurant, Retail" />
+                  {renderInput({ field: "businessName", label: "Business Name" })}
+                  {renderInput({ field: "businessType", label: "Business Type", placeholder: "e.g. Restaurant, Retail" })}
                   <div className="md:col-span-2 group">
                     <label className="block text-sm font-semibold text-slate-700 mb-1.5 transition-colors group-focus-within:text-emerald-600">Description</label>
                     <textarea 
@@ -211,15 +211,15 @@ export default function Settings() {
                       onChange={(e) => setField('description', e.target.value)} 
                     />
                   </div>
-                  <Input field="phone" label="Contact Phone" />
-                  <Input field="rating" label="Initial Rating (0-5)" type="number" />
+                  {renderInput({ field: "phone", label: "Contact Phone" })}
+                  {renderInput({ field: "rating", label: "Initial Rating (0-5)", type: "number" })}
                   <div className="md:col-span-2 border-t border-slate-100 pt-8 mt-4">
                     <h3 className="text-sm font-bold text-emerald-600 mb-5 uppercase tracking-wider flex items-center gap-2">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path></svg>
                       Location Settings
                     </h3>
                     <div className="space-y-5 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-                      <Input field="address" label="Full Business Address" />
+                      {renderInput({ field: "address", label: "Full Business Address" })}
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="group">
                           <label className="block text-sm font-semibold text-slate-700 mb-1.5 transition-colors group-focus-within:text-emerald-600">Latitude</label>
@@ -246,11 +246,11 @@ export default function Settings() {
                   To connect your WhatsApp number, you need an active Twilio account and your API credentials.
                 </div>
                 <div className="space-y-6">
-                  <Input field="whatsappNumber" label="Your Business WhatsApp Number" placeholder="+1234567890" />
+                  {renderInput({ field: "whatsappNumber", label: "Your Business WhatsApp Number", placeholder: "+1234567890" })}
                   <div className="grid md:grid-cols-2 gap-6 border-t border-slate-100 pt-8 mt-4">
-                    <Input field="twilioAccountSid" label="Twilio Account SID" type="password" />
-                    <Input field="twilioAuthToken" label="Twilio Auth Token" type="password" />
-                    <Input field="twilioWhatsappNumber" label="Twilio Sandbox/Sender Number" placeholder="whatsapp:+14155238886" />
+                    {renderInput({ field: "twilioAccountSid", label: "Twilio Account SID", type: "password" })}
+                    {renderInput({ field: "twilioAuthToken", label: "Twilio Auth Token", type: "password" })}
+                    {renderInput({ field: "twilioWhatsappNumber", label: "Twilio Sandbox/Sender Number", placeholder: "whatsapp:+14155238886" })}
                   </div>
                 </div>
               </div>
@@ -263,15 +263,15 @@ export default function Settings() {
                   <h2 className="text-2xl font-bold text-slate-800">AI Engine & Automation</h2>
                 </div>
                 <div className="space-y-5 mb-10">
-                  <Toggle field="chatbotEnabled" label="Enable Auto-Replies" desc="AI will automatically respond to incoming customer messages." />
-                  <Toggle field="automationEnabled" label="Enable Workflow Automation" desc="Automate order processing and status updates." />
+                  {renderToggle({ field: "chatbotEnabled", label: "Enable Auto-Replies", desc: "AI will automatically respond to incoming customer messages." })}
+                  {renderToggle({ field: "automationEnabled", label: "Enable Workflow Automation", desc: "Automate order processing and status updates." })}
                 </div>
                 <div className="border-t border-slate-100 pt-8">
                   <h3 className="text-sm font-bold text-purple-600 mb-5 uppercase tracking-wider flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     Advanced AI Configuration
                   </h3>
-                  <Input field="geminiApiKey" label="Google Gemini API Key (Optional Override)" type="password" placeholder="AI falls back to system default if empty" />
+                  {renderInput({ field: "geminiApiKey", label: "Google Gemini API Key (Optional Override)", type: "password", placeholder: "AI falls back to system default if empty" })}
                 </div>
               </div>
             )}
@@ -283,9 +283,9 @@ export default function Settings() {
                   <h2 className="text-2xl font-bold text-slate-800">Payment Gateway</h2>
                 </div>
                 <div className="space-y-6 mb-8">
-                  <Toggle field="razorpayEnabled" label="Enable Razorpay Integration" desc="Allow customers to complete transactions securely." />
+                  {renderToggle({ field: "razorpayEnabled", label: "Enable Razorpay Integration", desc: "Allow customers to complete transactions securely." })}
                 </div>
-                <Input field="razorpayPaymentBaseUrl" label="Razorpay Payment Base URL" placeholder="https://..." />
+                {renderInput({ field: "razorpayPaymentBaseUrl", label: "Razorpay Payment Base URL", placeholder: "https://..." })}
               </div>
             )}
 
